@@ -6,13 +6,25 @@ export const generateVibeAnalysis = async (
   userData: UserData,
   quizAnswers: QuizAnswer[]
 ): Promise<string> => {
-  // Netlify and other build environments typically expose this via process.env
-  // Ensure your Netlify site settings have API_KEY defined.
-  if (!process.env.API_KEY) {
-    throw new Error("API Key is missing. Please check your environment variables.");
+  
+  // Robust API Key retrieval for various environments (Node, Vite, Netlify)
+  let apiKey = "";
+  
+  // 1. Try standard process.env (Node/Webpack/Next.js)
+  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+    apiKey = process.env.API_KEY;
+  } 
+  // 2. Try Vite standard import.meta.env (Netlify + Vite usually requires VITE_ prefix)
+  else if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
+     apiKey = (import.meta as any).env.VITE_API_KEY || (import.meta as any).env.API_KEY;
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  if (!apiKey) {
+    console.error("API Key is missing from environment variables.");
+    return "# Ошибка конфигурации\n\nAPI ключ не найден. \n\n**Для владельца сайта:**\nУбедитесь, что в настройках Netlify (Site Settings > Environment Variables) добавлен ключ `VITE_API_KEY` или `API_KEY` со значением вашего токена Gemini.";
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
 
   // Format the user prompt to be readable by the LLM
   const promptData = `
@@ -44,7 +56,6 @@ export const generateVibeAnalysis = async (
     return response.text || "Error: The cosmic signal was interrupted. Please try again.";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    // Provide a user-friendly error message that might hint at config issues
-    return "# Connection Error\n\nНе удалось установить связь с Космосом (API Error). \n\nЕсли вы разработчик, проверьте переменную окружения `API_KEY`.";
+    return "# Connection Error\n\nНе удалось установить связь с Космосом (API Error). \n\nВозможно, квота ключа превышена или ключ недействителен.";
   }
 };
