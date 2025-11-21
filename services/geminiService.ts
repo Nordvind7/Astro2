@@ -7,21 +7,13 @@ export const generateVibeAnalysis = async (
   quizAnswers: QuizAnswer[]
 ): Promise<string> => {
   
-  // Robust API Key retrieval for various environments (Node, Vite, Netlify)
-  let apiKey = "";
-  
-  // 1. Try standard process.env (Node/Webpack/Next.js)
-  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-    apiKey = process.env.API_KEY;
-  } 
-  // 2. Try Vite standard import.meta.env (Netlify + Vite usually requires VITE_ prefix)
-  else if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
-     apiKey = (import.meta as any).env.VITE_API_KEY || (import.meta as any).env.API_KEY;
-  }
+  // Fix: Use process.env.API_KEY instead of import.meta.env.VITE_API_KEY to comply with SDK guidelines
+  // and fix the TypeScript error "Property 'env' does not exist on type 'ImportMeta'".
+  const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
-    console.error("API Key is missing from environment variables.");
-    return "# Ошибка конфигурации\n\nAPI ключ не найден. \n\n**Для владельца сайта:**\nУбедитесь, что в настройках Netlify (Site Settings > Environment Variables) добавлен ключ `VITE_API_KEY` или `API_KEY` со значением вашего токена Gemini.";
+    console.error("API Key is missing from environment variables (API_KEY).");
+    return "# Ошибка конфигурации\n\nAPI ключ не найден.\n\n**Инструкция:**\nУбедитесь, что переменная окружения `API_KEY` установлена и доступна.";
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -56,6 +48,6 @@ export const generateVibeAnalysis = async (
     return response.text || "Error: The cosmic signal was interrupted. Please try again.";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "# Connection Error\n\nНе удалось установить связь с Космосом (API Error). \n\nВозможно, квота ключа превышена или ключ недействителен.";
+    return "# Connection Error\n\nНе удалось установить связь с Космосом (API Error). \n\nПроверьте правильность API ключа и лимиты использования.";
   }
 };
